@@ -113,3 +113,5 @@ ASR需要公网可以访问的MinIO服务端，需要配置MINIO_BASE_URL为公�
 ## 📄 许可证
 
 [MIT License](LICENSE)
+
+开源不易，请star支持。💕💕💕
