@@ -1,0 +1,16 @@
+librosa
+soundfile
+moviepy==1.0.3
+numpy==1.26.4
+gradio
+modelscope
+openai
+g4f
+dashscope
+curl_cffi
+pydub
+blake3
+opencv-python-headless
+Cython
+BaiduPCS-Py
+minio

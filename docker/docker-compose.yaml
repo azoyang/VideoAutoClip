@@ -1,0 +1,32 @@
+services:
+  funclip:
+    # build: .
+    image: video-autoclip:0.0.1
+    ports:
+      - "7862:7862"
+    volumes:
+      - ./data:/app/data
+      - ./font:/app/font
+      # - ./ffmpeg:/app/ffmpeg
+      - ./videoautoclip:/app/videoautoclip
+    depends_on:
+      - minio
+    command: ["python", "videoautoclip/task_queue.py"]
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - /root/workspace/minio/data:/data
+      - /root/workspace/minio/config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioclip4123
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  minio_config:
