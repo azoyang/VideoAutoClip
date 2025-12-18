@@ -701,9 +701,9 @@ def build_ui():
             def _save_settings(a,b,c,d,e,f,g,h,ep,ak,sk,sec,bn,bu):
                 s0 = get_all_settings()
                 save_settings({
-                    "DASHSCOPE_API_KEY": a,
-                    "BAIDU_PCS_COOKIES": b,
-                    "BAIDU_PCS_BDUSS": c,
+                    "DASHSCOPE_API_KEY": (s0.get("DASHSCOPE_API_KEY","") if (a and "*" in a) else a),
+                    "BAIDU_PCS_COOKIES": (s0.get("BAIDU_PCS_COOKIES","") if (b and "*" in b) else b),
+                    "BAIDU_PCS_BDUSS": (s0.get("BAIDU_PCS_BDUSS","") if (c and "*" in c) else c),
                     "MODEL_NAME": d,
                     "MAX_CONCURRENT_TASKS": e,
                     "DASHSCOPE_BASE_HTTP_API_URL": f,
@@ -775,14 +775,24 @@ def build_ui():
                 cur.execute("SELECT result_video_path FROM tasks WHERE id=?", (int(tid),))
                 r = cur.fetchone()
                 conn.close()
-                return r[0] if r and r[0] else None
+                if r and r[0]:
+                    if os.path.exists(r[0]):
+                        return r[0]
+                    else:
+                        print(f"预览文件不存在: {r[0]}")
+                return None
             def _download(tid):
                 conn = _connect()
                 cur = conn.cursor()
                 cur.execute("SELECT result_video_path FROM tasks WHERE id=?", (int(tid),))
                 r = cur.fetchone()
                 conn.close()
-                return r[0] if r and r[0] else None
+                if r and r[0]:
+                    if os.path.exists(r[0]):
+                        return r[0]
+                    else:
+                        print(f"下载文件不存在: {r[0]}")
+                return None
             add_btn.click(_add, inputs=[share_link, extract_code], outputs=[logs_box, share_link, tasks_df])
             refresh_btn.click(_list, outputs=[tasks_df])
             tasks_df.select(_on_df_select, outputs=[task_id_inp, logs_box, video_out, file_out])
