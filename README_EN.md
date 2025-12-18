@@ -109,3 +109,5 @@ Configure the following key information in the "Settings" tab of the Web UI:
 ## 📄 License
 
 [MIT License](LICENSE)
+
+Open source is not easy, please star to support. 💕💕💕
