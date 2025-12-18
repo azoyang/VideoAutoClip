@@ -99,6 +99,13 @@ Configure the following key information in the "Settings" tab of the Web UI:
 4. **Smart Editing**: Clips highlight segments based on AI suggestions, adding cover, subtitles, and BGM.
 5. **Export**: Generates the final MP4 video for download.
 
+## 🗺️ Roadmap
+
+- [1] Add BGM selection feature
+- [2] Support more cloud storage services
+- [3] Provide MCP call service
+- [4] Add video understanding capability to sample and analyze lifestyle footage, automatically generating subtitles and dubbing
+
 ## 📄 License
 
 [MIT License](LICENSE)
