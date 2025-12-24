@@ -200,11 +200,11 @@ def select_hook_with_llm(clips: List[tuple], srt_text: str, llm_func: Callable[[
             
         for start, end, text,kw in clips:
             if hook_text in text or text.replace(" ", "") in hook_text.replace(" ", ""):
-                return (start, min(start + 10.0, end), text,kw)
-        return (clips[0][0], min(clips[0][0] + 10.0, clips[0][1]), clips[0][2],"")
+                return (start, end, text, kw)
+        return (clips[0][0], clips[0][1], clips[0][2], "")
     except Exception as e:
         logging.warning(f"LLM 钩子选择失败: {e}")
-        return (clips[0][0], min(clips[0][0] + 10.0, clips[0][1]), clips[0][2],"")
+        return (clips[0][0], clips[0][1], clips[0][2], "")
 
 # ==================== 视频剪辑核心 ====================
 def find_clips_by_keywords(segments: list, keywords: List[str], expand_sec: float = 1.0) -> List[tuple]:
@@ -536,7 +536,8 @@ def create_promo_video(
         start_time_str = "00:00:00,000"
         end_time_str = "00:00:02,000"
         clip_srt += f"1\n{start_time_str} --> {end_time_str}\n[封面]\n\n"
-        
+
+    print(f"总片段: {total_clips}")    
     for i, (start, end, text, kw) in enumerate(total_clips):
         start = max(0, start)
         end = min(video.duration, end)

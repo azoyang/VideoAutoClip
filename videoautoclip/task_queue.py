@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional, List, Tuple
 import sys
 from pathlib import Path
-
+import re
 _D = Path(__file__).resolve().parent
 _R = _D.parent
 pp = str(_R)
@@ -323,7 +323,7 @@ def _parse_ls_dirs(text: str) -> List[str]:
         s = line.strip()
         if not s:
             continue
-        import re
+
         m = re.match(r"^[dD](?:\||\s+)(.*)$", s)
         if m:
             res.append(m.group(1).strip())
@@ -348,7 +348,6 @@ def _parse_ls_dirs(text: str) -> List[str]:
 
 def _parse_ls_names(text: str) -> List[str]:
     res: List[str] = []
-    import re
     
     lines = text.splitlines()
     root_path = None
@@ -396,6 +395,17 @@ def _parse_ls_names(text: str) -> List[str]:
             res.append(prefix + nm)
     return res
 
+def _is_video_valid(path: str) -> bool:
+    if not os.path.exists(path) or os.path.getsize(path) < 1024:
+        return False
+    # 尝试读取前0.1秒来验证是否可解码
+    cmd = [_ffmpeg_bin(), "-v", "error", "-i", path, "-t", "0.1", "-f", "null", "-"]
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 def _concatenate_videos(video_paths: List[str], output_path: str):
     if not video_paths:
         print("无视频文件可合并")
@@ -403,6 +413,10 @@ def _concatenate_videos(video_paths: List[str], output_path: str):
     #去除video_paths重复项
     video_paths = list(set(video_paths))
     print(f"去除重复{video_paths}")
+    #重新文件名的按升序排序
+    video_paths.sort(key=lambda x: [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', x)])
+
+    print(f"排序后{video_paths}")
     output_path = os.path.abspath(output_path)
     rnd = f"video_list_{hashlib.md5(('|'.join(video_paths)).encode('utf-8')).hexdigest()}.txt"
     out_dir = os.path.dirname(output_path)
@@ -424,9 +438,17 @@ def _concatenate_videos(video_paths: List[str], output_path: str):
     print(f"执行合并命令: {' '.join(cmd)}")
     try:
         subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"合并视频失败: {e}")
-        raise
+        if not _is_video_valid(output_path):
+             raise Exception("合并后文件验证失败")
+    except Exception as e:
+        print(f"快速合并失败，尝试重编码合并: {e}")
+        # 移除 -c copy 进行重编码合并
+        cmd = [_ffmpeg_bin(), "-f", "concat", "-safe", "0", "-i", tmp_list, "-movflags", "+faststart", "-y", output_path]
+        try:
+             subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e2:
+             print(f"重编码合并也失败: {e2}")
+             raise e2
     finally:
         if os.path.exists(tmp_list):
             # os.remove(tmp_list) # 暂时保留以便调试
@@ -512,7 +534,6 @@ def _execute_task(task_id: int):
         link = r[0] if r else ""
         #从link中提取pwd
         pwd = ""
-        import re
         m = re.search(r"pwd=([^&]+)", link)
         if m:
             pwd = m.group(1)
@@ -634,6 +655,10 @@ def _execute_task(task_id: int):
             update_progress(task_id, 100)
             return
         merged_path = os.path.join(work_dir, "merged.mp4")
+        if os.path.exists(merged_path) and not _is_video_valid(merged_path):
+             print(f"已存在的合并视频无效，删除: {merged_path}")
+             os.remove(merged_path)
+
         if not os.path.exists(merged_path):
             _concatenate_videos(vids_local, merged_path)
         update_progress(task_id, 50)
@@ -641,12 +666,22 @@ def _execute_task(task_id: int):
         if not os.path.exists(audio_path):
             _export_audio(merged_path, audio_path)
         update_progress(task_id, 60)
-        try:
-            print(f"开始ASR识别 {audio_path}|{work_dir}")
-            asr_result, srt_result, asr_state = qwen_asr_flash_async_recog(audio_path, "zh", output_dir=work_dir)
-        except Exception as e:
-            print(f"ASR识别失败{e}")
-            asr_result, srt_result, asr_state = "", "", {}
+        srt_cache_path = os.path.join(work_dir, os.path.splitext(os.path.basename(audio_path))[0] + ".srt")
+        if os.path.exists(srt_cache_path) and os.path.getsize(srt_cache_path) > 0:
+            with open(srt_cache_path, "r", encoding="utf-8", errors="ignore") as f:
+                srt_result = f.read()
+            asr_result, asr_state = "", {}
+            print(f"ASR使用缓存字幕 {srt_cache_path}")
+        else:
+            try:
+                print(f"开始ASR识别 {audio_path}|{work_dir}")
+                asr_result, srt_result, asr_state = qwen_asr_flash_async_recog(audio_path, "zh", output_dir=work_dir)
+                if srt_result:
+                    with open(srt_cache_path, "w", encoding="utf-8") as f:
+                        f.write(srt_result)
+            except Exception as e:
+                print(f"ASR识别失败{e}")
+                asr_result, srt_result, asr_state = "", "", {}
         if not srt_result:
             _update_task(task_id, status="failed", finished_at=datetime.now(), error_message="识别失败")
             update_progress(task_id, 100)

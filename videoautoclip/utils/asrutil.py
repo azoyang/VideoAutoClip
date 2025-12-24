@@ -310,7 +310,7 @@ def qwen_asr_flash_async_recog(audio_input, language="zh", output_dir=None):
         return "", "", {}
 
 if __name__ == "__main__":
-    asr_text, asr_srt, asr_state = qwen_asr_flash_async_recog("D:\\pythonwork\\VideoAutoClip\\data\\merged_compressed_more.wav","D:\\pythonwork\\VideoAutoClip\\data\\output")
+    asr_text, asr_srt, asr_state = qwen_asr_flash_async_recog("D:\\pythonwork\\VideoAutoCliped_compressed_more.wav","D:\\pythonwork\\VideoAutoClip\\data\\output")
     print(f"ASR识别结果: {asr_text}")
     print(f"ASR识别SRT: {asr_srt}")
     print(f"ASR识别状态: {asr_state}")
